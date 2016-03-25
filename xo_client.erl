@@ -1,24 +1,31 @@
 -module(xo_client).
--export([client_loop/1, connect_to_game/1]).
+-export([client_loop/1, connect_to_game/1, get_status/1,turn/2]).
 
-client_loop(Room) ->
+client_loop({Room, Sign}) ->
 	receive
-		{room, RoomPid} ->
-			client_loop(RoomPid);
+		{room, NewRoomState} ->
+			client_loop(NewRoomState);
 		{get_status} ->
-			Room ! {status, self()};
+			Room ! {status, self()},
+			client_loop({Room, Sign});
 		{status, Field} ->
-			{Row1, Other} = lists:split(3, Field),
-			io:format("~s ~s ~s~n",Row1),
-			{Row2, Row3} = lists:split(3, Other),
-			io:format("~s ~s ~s~n",Row2),
-			io:format("~s ~s ~s~n",Row3),
-			client_loop(Room)
+			io:format("~s ~s ~s~n~s ~s ~s~n~s ~s ~s~n",Field),
+			client_loop({Room, Sign});
+		{turn, Turn} ->
+			Room ! {turn, {self(), Sign}, Turn},
+			client_loop({Room, Sign});
+		{msg, Msg} ->
+			io:format("~s~n",[Msg])
 	end.
 
 connect_to_game(ServerPid) ->
-	Pid = spawn(xo_client, client_loop, [undefined]),
-	ServerPid ! {connect_random, Pid}.
+	Pid = spawn(xo_client, client_loop, [{undefined,undefined}]),
+	ServerPid ! {connect_random, Pid},
+	Pid.
 
 get_status(UserPid) ->
 	UserPid ! {get_status}.
+
+turn(UserPid,Turn) ->
+	UserPid ! {turn, Turn}.
+
