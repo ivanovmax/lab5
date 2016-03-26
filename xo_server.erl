@@ -54,6 +54,7 @@ room_loop(RoomState) ->
 								false ->
 									OtherUser ! {msg, "Your turn"},
 									OtherUser ! {status, Field},
+									UserPid ! {status, Field},
 									Room = #room { user1 = RoomState#room.user1, user2 = RoomState#room.user2,
 										turns = Turns, last = Sign, field = Field},
 									%io:format("~s~n",[Room]),

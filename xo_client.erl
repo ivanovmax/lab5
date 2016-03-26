@@ -15,7 +15,8 @@ client_loop({Room, Sign}) ->
 			Room ! {turn, {self(), Sign}, Turn},
 			client_loop({Room, Sign});
 		{msg, Msg} ->
-			io:format("~s~n",[Msg])
+			io:format("~s~n",[Msg]),
+			client_loop({Room, Sign})
 	end.
 
 connect_to_game(ServerPid) ->
