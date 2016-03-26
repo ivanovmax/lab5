@@ -16,7 +16,9 @@ client_loop({Room, Sign}) ->
 			client_loop({Room, Sign});
 		{msg, Msg} ->
 			io:format("~s~n",[Msg]),
-			client_loop({Room, Sign})
+			client_loop({Room, Sign});
+		{disconnect, Msg} ->
+			io:format("~s~nYou disconnected~n", [Msg])
 	end.
 
 connect_to_game(ServerPid) ->
