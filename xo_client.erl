@@ -1,18 +1,15 @@
 -module(xo_client).
--export([client_loop/1, connect_to_game/1, get_status/1,turn/2]).
+-export([client_loop/1, create/0, get_status/1,turn/2]).
 
 client_loop({Room, Sign}) ->
 	receive
 		{room, NewRoomState} ->
 			client_loop(NewRoomState);
-		{get_status} ->
-			Room ! {status, self()},
-			client_loop({Room, Sign});
-		{status, Field} ->
-			io:format("~s ~s ~s~n~s ~s ~s~n~s ~s ~s~n",Field),
+		{status} ->
+			io:format("~s ~s ~s~n~s ~s ~s~n~s ~s ~s~n", gen_server:call(Room, status)),
 			client_loop({Room, Sign});
 		{turn, Turn} ->
-			Room ! {turn, {self(), Sign}, Turn},
+			gen_server:call(Room, {turn, {self(), Sign}, Turn}),
 			client_loop({Room, Sign});
 		{msg, Msg} ->
 			io:format("~s~n",[Msg]),
@@ -21,13 +18,16 @@ client_loop({Room, Sign}) ->
 			io:format("~s~nYou disconnected~n", [Msg])
 	end.
 
-connect_to_game(ServerPid) ->
-	Pid = spawn(xo_client, client_loop, [{undefined,undefined}]),
-	ServerPid ! {connect_random, Pid},
-	Pid.
+% connect_to_game(ServerPid) ->
+% 	Pid = spawn(xo_client, client_loop, [{undefined,undefined}]),
+% 	%ServerPid ! {connect_random, Pid},
+% 	Pid.
+
+create() ->
+	spawn(xo_client, client_loop, [{undefined,undefined}]).
 
 get_status(UserPid) ->
-	UserPid ! {get_status}.
+	UserPid ! {status}.
 
 turn(UserPid,Turn) ->
 	UserPid ! {turn, Turn}.

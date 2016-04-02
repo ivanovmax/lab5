@@ -1,27 +1,32 @@
 -module(xo_room).
--export([room_loop/1]).
+% -export([room_loop/1]).
+
+-behaviour(gen_server).
+
+-export([create/0]).
+-export([init/1, handle_call/3, handle_cast/2, handle_info/2, terminate/2, code_change/3]).
 
 -record(room, {user1, user2, field = lists:duplicate(9, "_"), turns = 1, last}).
 
-room_loop(RoomState) ->
-	receive
-		{connect, User} -> 
-			NewRoomState = #room { user1 = RoomState#room.user1, user2 = User, last = x },
-			room_loop(NewRoomState);
-		{turn, User, {Row,Col}} when Row >= 1, Row =< 3, Col >= 1, Col =< 3 ->
-			case make_turn(RoomState, User, {Row,Col}) of
-				{continue, NewRoomState} ->
-					room_loop(NewRoomState);
-				{break} -> 
-					io:format("Room closed~n")
-			end;
-		{turn, {UserPid,_}, _} ->
-			UserPid ! {msg, "Wrong position"},
-			room_loop(RoomState);
-		{status, UserPid} ->
-			UserPid ! {status, RoomState#room.field},
-			room_loop(RoomState)	
-	end.
+% room_loop(RoomState) ->
+% 	receive
+% 		{connect, User} -> 
+% 			NewRoomState = #room { user1 = RoomState#room.user1, user2 = User, last = x },
+% 			room_loop(NewRoomState);
+% 		{turn, User, {Row,Col}} when Row >= 1, Row =< 3, Col >= 1, Col =< 3 ->
+% 			case make_turn(RoomState, User, {Row,Col}) of
+% 				{continue, NewRoomState} ->
+% 					room_loop(NewRoomState);
+% 				{break} -> 
+% 					io:format("Room closed~n")
+% 			end;
+% 		{turn, {UserPid,_}, _} ->
+% 			UserPid ! {msg, "Wrong position"},
+% 			room_loop(RoomState);
+% 		{status, UserPid} ->
+% 			UserPid ! {status, RoomState#room.field},
+% 			room_loop(RoomState)	
+% 	end.
 
 make_turn(RoomState, {UserPid,Sign}, {Row,Col}) ->
 	Pos = (Row-1)*3 + Col,
@@ -86,3 +91,35 @@ check_turn(true, false) -> 2.
 
 setnth(1, [_|Tail], NewH) -> [NewH|Tail];
 setnth(I, [H|Tail], NewH) -> [H|setnth(I-1, Tail, NewH)].
+
+
+
+create() ->
+	gen_server:start_link(?MODULE, [], []).
+
+
+init(_Args) ->
+	{ok, #room{}}.
+
+handle_call({create, User1, User2}, _From, RoomState) ->
+	User1 ! {room, {self(), x}},
+	User2 ! {room, {self(), o}},
+	NewRoomState = #room { user1 = User1, user2 = User2, last = x },
+	{reply, ok, NewRoomState};
+
+handle_call({turn, User, {Row,Col}}, _From, RoomState) -> 
+	case make_turn(RoomState, User, {Row,Col}) of
+		{continue, NewRoomState} ->
+			{reply, ok, NewRoomState };
+		{break} ->
+			{stop, "Room closed", []}
+	end;
+
+handle_call(status, _From, RoomState) ->
+	{reply, RoomState#room.field, RoomState}.
+
+handle_cast(_Message, State) -> { noreply, State }.
+handle_info(_Message, State) -> { noreply, State }.
+terminate(_Reason, _State) -> ok.
+code_change(_OldVersion, State, _Extra) -> { ok, State }.
+
