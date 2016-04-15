@@ -8,26 +8,6 @@
 
 -record(room, {user1, user2, field = lists:duplicate(9, "_"), turns = 1, last}).
 
-% room_loop(RoomState) ->
-% 	receive
-% 		{connect, User} -> 
-% 			NewRoomState = #room { user1 = RoomState#room.user1, user2 = User, last = x },
-% 			room_loop(NewRoomState);
-% 		{turn, User, {Row,Col}} when Row >= 1, Row =< 3, Col >= 1, Col =< 3 ->
-% 			case make_turn(RoomState, User, {Row,Col}) of
-% 				{continue, NewRoomState} ->
-% 					room_loop(NewRoomState);
-% 				{break} -> 
-% 					io:format("Room closed~n")
-% 			end;
-% 		{turn, {UserPid,_}, _} ->
-% 			UserPid ! {msg, "Wrong position"},
-% 			room_loop(RoomState);
-% 		{status, UserPid} ->
-% 			UserPid ! {status, RoomState#room.field},
-% 			room_loop(RoomState)	
-% 	end.
-
 make_turn(RoomState, {UserPid,Sign}, {Row,Col}) ->
 	Pos = (Row-1)*3 + Col,
 	case check_turn(RoomState#room.last /= Sign, lists:nth(Pos, RoomState#room.field) == "_") of
@@ -93,17 +73,15 @@ setnth(1, [_|Tail], NewH) -> [NewH|Tail];
 setnth(I, [H|Tail], NewH) -> [H|setnth(I-1, Tail, NewH)].
 
 
-
 create() ->
 	gen_server:start_link(?MODULE, [], []).
-
 
 init(_Args) ->
 	{ok, #room{}}.
 
-handle_call({create, User1, User2}, _From, RoomState) ->
-	User1 ! {room, {self(), x}},
-	User2 ! {room, {self(), o}},
+handle_call({start, User1, User2}, _From, _) ->
+	User1 ! {state, {game, {self(), x}}},
+	User2 ! {state, {game, {self(), o}}},
 	NewRoomState = #room { user1 = User1, user2 = User2, last = x },
 	{reply, ok, NewRoomState};
 
@@ -122,4 +100,3 @@ handle_cast(_Message, State) -> { noreply, State }.
 handle_info(_Message, State) -> { noreply, State }.
 terminate(_Reason, _State) -> ok.
 code_change(_OldVersion, State, _Extra) -> { ok, State }.
-
